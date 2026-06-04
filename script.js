@@ -1,9 +1,14 @@
-// Configuración
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// Configuración de proxies CORS
+const CORS_PROXIES = [
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?',
+    'https://thingproxy.freeboard.io/fetch/',
+];
 
 let currentPageContent = null;
 let currentLanguage = 'es';
 let currentUrl = '';
+let currentProxyIndex = 0;
 
 // Elementos del DOM
 const urlInput = document.getElementById('urlInput');
@@ -40,6 +45,7 @@ async function handleTranslate() {
 
     currentUrl = url;
     currentLanguage = languageSelect.value;
+    currentProxyIndex = 0;
     await translatePage(url);
 }
 
@@ -92,40 +98,96 @@ async function translatePage(url) {
 }
 
 async function fetchPageContent(url) {
-    try {
-        // Intentar con CORS proxy
-        const proxyUrl = CORS_PROXY + encodeURIComponent(url);
-        const response = await fetch(proxyUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    let lastError = null;
+
+    // Intentar con cada proxy disponible
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+        try {
+            currentProxyIndex = i;
+            statusText.textContent = `📥 Intentando cargar página (proxy ${i + 1}/${CORS_PROXIES.length})...`;
+            
+            const proxyUrl = buildProxyUrl(CORS_PROXIES[i], url);
+            console.log(`Intentando con proxy: ${proxyUrl}`);
+            
+            const response = await Promise.race([
+                fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), 10000)
+                )
+            ]);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
-        });
+
+            const text = await response.text();
+            
+            // Validar que sea HTML
+            if (text && (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('<body'))) {
+                console.log(`✓ Proxy ${i + 1} funcionó correctamente`);
+                return text;
+            } else {
+                throw new Error('Respuesta no válida');
+            }
+
+        } catch (error) {
+            console.warn(`✗ Proxy ${i + 1} falló:`, error.message);
+            lastError = error;
+            // Continuar con el siguiente proxy
+        }
+    }
+
+    // Si todos los proxies fallan, intentar acceso directo
+    try {
+        console.log('Intentando acceso directo...');
+        statusText.textContent = '📥 Intentando acceso directo...';
+        
+        const response = await Promise.race([
+            fetch(url, {
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                },
+                mode: 'cors'
+            }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 10000)
+            )
+        ]);
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP ${response.status}`);
         }
 
         const text = await response.text();
-        if (!text || text.includes('<!DOCTYPE html>') === false && text.includes('<html') === false) {
-            throw new Error('Respuesta no válida');
-        }
+        console.log('✓ Acceso directo funcionó');
         return text;
 
-    } catch (error) {
-        console.error('Error con proxy:', error);
-        // Fallback: intentar acceso directo (puede fallar por CORS)
-        try {
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                }
-            });
-            if (!response.ok) throw new Error('Error de red');
-            return await response.text();
-        } catch (e) {
-            throw new Error('No se pudo acceder a la página. El sitio puede tener restricciones CORS.');
-        }
+    } catch (e) {
+        console.error('✗ Acceso directo falló:', e.message);
+    }
+
+    throw new Error(
+        `No se pudo cargar la página después de intentar ${CORS_PROXIES.length + 1} métodos. ` +
+        `El sitio puede tener restricciones muy estrictas. ` +
+        `Intenta con otra página o URL diferente.`
+    );
+}
+
+function buildProxyUrl(proxyBase, targetUrl) {
+    if (proxyBase.includes('corsproxy.io')) {
+        return proxyBase + targetUrl;
+    } else if (proxyBase.includes('thingproxy')) {
+        return proxyBase + targetUrl;
+    } else {
+        // allorigins
+        return proxyBase + encodeURIComponent(targetUrl);
     }
 }
 
@@ -146,8 +208,8 @@ function extractTexts(doc) {
     while (node = walker.nextNode()) {
         const text = node.textContent.trim();
         
-        // Filtrar textos vacíos, muy cortos y duplicados
-        if (text && text.length > 1 && !textMap.has(text) && !isOnlyNumbers(text)) {
+        // Filtrar textos vacíos, muy cortos, números y duplicados
+        if (text && text.length > 2 && !textMap.has(text) && !isOnlyNumbers(text) && !isDate(text)) {
             const textId = `TEXT_${id}`;
             texts.push({
                 id: textId,
@@ -165,7 +227,7 @@ function extractTexts(doc) {
     elementsWithAttrs.forEach(elem => {
         ['placeholder', 'title', 'alt', 'aria-label'].forEach(attr => {
             const value = elem.getAttribute(attr);
-            if (value && value.trim() && value.length > 1 && !textMap.has(value) && !isOnlyNumbers(value)) {
+            if (value && value.trim() && value.length > 2 && !textMap.has(value) && !isOnlyNumbers(value)) {
                 texts.push({
                     id: `ATTR_${id}`,
                     text: value,
@@ -183,7 +245,11 @@ function extractTexts(doc) {
 }
 
 function isOnlyNumbers(text) {
-    return /^[\d\s\.\,\-\+\(\)%$€¥]*$/.test(text);
+    return /^[\d\s\.\,\-\+\(\)%$€¥:;/]*$/.test(text);
+}
+
+function isDate(text) {
+    return /^\d{1,4}[-\/]\d{1,2}[-\/]\d{1,4}|^\d{1,2}:\d{2}/.test(text);
 }
 
 async function translateTexts(textsArray, targetLang) {
@@ -211,7 +277,7 @@ async function translateTexts(textsArray, targetLang) {
             });
 
             statusText.textContent = `🌐 Traduciendo ${Math.min(i + batchSize, textsArray.length)}/${textsArray.length} textos...`;
-            await new Promise(resolve => setTimeout(resolve, 100)); // Pequeño delay
+            await new Promise(resolve => setTimeout(resolve, 200));
         } catch (error) {
             console.error('Error en traducción de lote:', error);
             batch.forEach(item => {
@@ -230,17 +296,23 @@ async function translateTexts(textsArray, targetLang) {
 async function translateBatch(texts, targetLang) {
     try {
         // Usar LibreTranslate API (gratuita)
-        const response = await fetch('https://libretranslate.de/translate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                q: texts.join('\n'),
-                source: 'auto',
-                target: targetLang
-            })
-        });
+        const response = await Promise.race([
+            fetch('https://libretranslate.de/translate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Mozilla/5.0'
+                },
+                body: JSON.stringify({
+                    q: texts.join('\n'),
+                    source: 'auto',
+                    target: targetLang
+                })
+            }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout traducción')), 15000)
+            )
+        ]);
 
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status}`);
@@ -256,13 +328,43 @@ async function translateBatch(texts, targetLang) {
 
     } catch (error) {
         console.error('LibreTranslate error:', error);
-        return texts; // Retornar textos originales si falla
+        // Intentar API alternativa de MyMemory
+        try {
+            return await translateWithMyMemory(texts, targetLang);
+        } catch (e) {
+            console.error('MyMemory error:', e);
+            return texts; // Retornar textos originales si todo falla
+        }
     }
 }
 
+async function translateWithMyMemory(texts, targetLang) {
+    const results = [];
+    
+    // MyMemory permite máximo 500 caracteres por solicitud
+    for (const text of texts) {
+        try {
+            const response = await fetch(
+                `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`
+            );
+            const data = await response.json();
+            
+            if (data.responseData && data.responseData.translatedText) {
+                results.push(data.responseData.translatedText);
+            } else {
+                results.push(text);
+            }
+        } catch (e) {
+            console.warn('MyMemory falló para:', text);
+            results.push(text);
+        }
+    }
+    
+    return results;
+}
+
 function replaceTexts(doc, translations, textsArray) {
-    // Crear mapa rápido de búsqueda
-    textsArray.forEach((item, index) => {
+    textsArray.forEach((item) => {
         const trans = translations[item.nodeId];
         if (!trans) return;
 
@@ -283,12 +385,9 @@ function replaceTexts(doc, translations, textsArray) {
 function displayTranslatedPage(doc, baseUrl) {
     const content = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
     
-    // Crear contenedor limpio
     const cleanContent = sanitizeHTML(content);
-    
     previewContainer.innerHTML = `<div class="translated-content">${cleanContent}</div>`;
     
-    // Ajustar URLs de recursos
     adjustResourceUrls(previewContainer, baseUrl);
 }
 
@@ -296,12 +395,12 @@ function sanitizeHTML(html) {
     const temp = document.createElement('div');
     temp.innerHTML = html;
 
-    // Remover scripts peligrosos
-    temp.querySelectorAll('script, iframe').forEach(el => {
+    // Remover scripts y elementos peligrosos
+    temp.querySelectorAll('script, iframe, embed, object').forEach(el => {
         el.remove();
     });
 
-    // Remover atributos on* (onclick, onload, etc)
+    // Remover atributos on*
     temp.querySelectorAll('*').forEach(el => {
         Array.from(el.attributes).forEach(attr => {
             if (attr.name.startsWith('on')) {
@@ -318,11 +417,11 @@ function adjustResourceUrls(container, baseUrl) {
         const baseUrlObj = new URL(baseUrl);
         const baseHref = `${baseUrlObj.protocol}//${baseUrlObj.hostname}`;
 
-        container.querySelectorAll('img, link').forEach(el => {
-            const attr = el.tagName === 'LINK' ? 'href' : 'src';
+        container.querySelectorAll('img, link, source').forEach(el => {
+            const attr = el.tagName === 'LINK' ? 'href' : (el.tagName === 'SOURCE' ? 'src' : 'src');
             let url = el.getAttribute(attr);
             
-            if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+            if (url && !url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
                 if (url.startsWith('/')) {
                     url = baseHref + url;
                 } else {
@@ -393,6 +492,7 @@ function clearError() {
 
 // Inicialización
 window.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Web Translator cargado y listo');
+    console.log('✅ Web Translator v2.0 - Mejorado con múltiples proxies');
+    console.log('Proxies disponibles:', CORS_PROXIES.length);
     urlInput.focus();
 });
