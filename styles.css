@@ -1,0 +1,311 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+header p {
+    font-size: 1.1em;
+    opacity: 0.95;
+}
+
+main {
+    padding: 40px;
+}
+
+.input-section {
+    margin-bottom: 40px;
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label,
+.language-options label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 1em;
+}
+
+#urlInput,
+#languageSelect {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s;
+    margin-bottom: 15px;
+}
+
+#urlInput:focus,
+#languageSelect:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.language-options {
+    margin-bottom: 20px;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    width: 100%;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.btn-secondary:hover {
+    background: #667eea;
+    color: white;
+}
+
+.loading {
+    text-align: center;
+    padding: 30px;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #f5c6cb;
+    margin-top: 15px;
+}
+
+.controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.status-text {
+    color: #667eea;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.preview-section {
+    margin-top: 30px;
+}
+
+.preview-container {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 30px;
+    min-height: 400px;
+    max-height: 800px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.placeholder {
+    text-align: center;
+    color: #999;
+    font-size: 1.1em;
+    padding: 60px 20px;
+}
+
+/* Estilos para el contenido traducido */
+.translated-content {
+    line-height: 1.6;
+}
+
+.translated-content img {
+    max-width: 100%;
+    height: auto;
+    margin: 15px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.translated-content a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.translated-content a:hover {
+    text-decoration: underline;
+}
+
+.translated-content h1,
+.translated-content h2,
+.translated-content h3 {
+    margin: 20px 0 10px 0;
+    color: #333;
+}
+
+.translated-content h1 {
+    font-size: 2em;
+}
+
+.translated-content h2 {
+    font-size: 1.6em;
+}
+
+.translated-content h3 {
+    font-size: 1.3em;
+}
+
+.translated-content p {
+    margin-bottom: 15px;
+}
+
+.translated-content button,
+.translated-content input,
+.translated-content select {
+    padding: 8px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.translated-content button:hover {
+    background: #e9ecef;
+}
+
+footer {
+    background: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8em;
+    }
+
+    main {
+        padding: 20px;
+    }
+
+    .input-section {
+        padding: 20px;
+    }
+
+    .preview-container {
+        min-height: 300px;
+        padding: 20px;
+    }
+
+    .controls {
+        flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+    }
+
+    .btn-secondary {
+        margin-right: 0;
+    }
+}
+
+/* Scrollbar personalizado */
+.preview-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.preview-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.preview-container::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.preview-container::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
